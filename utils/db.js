@@ -1,24 +1,18 @@
-import mongodb from 'mongodb';
-// eslint-disable-next-line no-unused-vars
-import Collection from 'mongodb/lib/collection';
-import envLoader from './env_loader';
+import { MongoClient } from 'mongodb';
 
-/**
- * A MongoDB client.
- */
+const HOST = process.env.DB_HOST || 'localhost';
+const PORT = process.env.DB_PORT || 27017;
+const DATABASE = process.env.DB_DATABASE || 'files_manager';
+const url = `mongodb://${HOST}:${PORT}`;
+
 class DBClient {
-  /**
-   * A new Database Client instance.
-   */
   constructor() {
-    envLoader();
-    const host = process.env.DB_HOST || 'localhost';
-    const port = process.env.DB_PORT || 27017;
-    const database = process.env.DB_DATABASE || 'files_manager';
-    const dbURL = `mongodb://${host}:${port}/${database}`;
-
-    this.client = new mongodb.MongoClient(dbURL, { useUnifiedTopology: true });
-    this.client.connect();
+    this.client = new MongoClient(url, { useUnifiedTopology: true, useNewUrlParser: true });
+    this.client.connect().then(() => {
+      this.db = this.client.db(`${DATABASE}`);
+    }).catch((err) => {
+      console.log(err);
+    });
   }
 
   isAlive() {
@@ -26,21 +20,17 @@ class DBClient {
   }
 
   async nbUsers() {
-    return this.client.db().collection('users').countDocuments();
+    const users = this.db.collection('users');
+    const usersNum = await users.countDocuments();
+    return usersNum;
   }
 
   async nbFiles() {
-    return this.client.db().collection('files').countDocuments();
-  }
-
-  async usersCollection() {
-    return this.client.db().collection('users');
-  }
-
-  async filesCollection() {
-    return this.client.db().collection('files');
+    const files = this.db.collection('files');
+    const filesNum = await files.countDocuments();
+    return filesNum;
   }
 }
 
-export const dbClient = new DBClient();
-export default dbClient;
+const dbClient = new DBClient();
+module.exports = dbClient;
